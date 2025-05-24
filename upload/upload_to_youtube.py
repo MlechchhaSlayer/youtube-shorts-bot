@@ -67,9 +67,9 @@ def upload_video(video_file, title, description, tags):
     response = request.execute()
     print(f"✅ Uploaded successfully: https://youtu.be/{response['id']}")
 
-if __name__ == "__main__":
+def main():
     title = "🔥 Daily Motivation: Never Give Up!"
     description = "This motivational short will kickstart your day. 💪\n#motivation #shorts"
     tags = ["motivation", "shorts", "inspiration"]
-
     upload_video("video/video_1.mp4", title, description, tags)
+
