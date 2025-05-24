@@ -1,16 +1,16 @@
 import os
 import pickle
+import random
+from datetime import datetime
+from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
-import googleapiclient.discovery
-import googleapiclient.errors
 from googleapiclient.http import MediaFileUpload
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
-client_id = os.getenv("CLIENT_ID")
-client_secret = os.getenv("CLIENT_SECRET")
 
+CLIENT_ID = os.getenv("CLIENT_ID")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
 def get_authenticated_service():
@@ -19,25 +19,22 @@ def get_authenticated_service():
         with open("token.pickle", "rb") as token:
             creds = pickle.load(token)
     else:
-        # Create credentials using client_id and client_secret directly
         flow = InstalledAppFlow.from_client_config(
             {
                 "installed": {
-                    "client_id": client_id,
-                    "client_secret": client_secret,
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
                     "auth_uri": "https://accounts.google.com/o/oauth2/auth",
                     "token_uri": "https://oauth2.googleapis.com/token",
                     "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"]
                 }
             },
-            scopes=SCOPES
+            SCOPES
         )
-        creds = flow.run_local_server(port=0)
-
+        creds = flow.run_console()
         with open("token.pickle", "wb") as token:
             pickle.dump(creds, token)
-
-    return googleapiclient.discovery.build("youtube", "v3", credentials=creds)
+    return build("youtube", "v3", credentials=creds)
 
 def upload_video(video_file, title, description, tags):
     youtube = get_authenticated_service()
@@ -56,7 +53,6 @@ def upload_video(video_file, title, description, tags):
     }
 
     media_file = MediaFileUpload(video_file, chunksize=256 * 1024, resumable=True)
-
     request = youtube.videos().insert(
         part="snippet,status",
         body=request_body,
@@ -65,11 +61,21 @@ def upload_video(video_file, title, description, tags):
 
     print("📤 Uploading video...")
     response = request.execute()
-    print(f"✅ Uploaded successfully: https://youtu.be/{response['id']}")
+    video_id = response["id"]
+    print(f"✅ Uploaded: https://youtu.be/{video_id}")
 
-def main():
-    title = "🔥 Daily Motivation: Never Give Up!"
-    description = "This motivational short will kickstart your day. 💪\n#motivation #shorts"
+    with open("logs.txt", "a") as f:
+        f.write(f"{datetime.now()} - Uploaded {video_file} as {title} - https://youtu.be/{video_id}\n")
+
+if __name__ == "__main__":
+    videos = [f for f in os.listdir("video") if f.endswith(".mp4")]
+    if not videos:
+        print("❌ No videos found in the 'video' folder.")
+        exit(1)
+
+    chosen_video = random.choice(videos)
+    title = "🔥 Daily Motivation"
+    description = "Stay inspired! 💪\n#motivation #shorts"
     tags = ["motivation", "shorts", "inspiration"]
-    upload_video("video/video_1.mp4", title, description, tags)
 
+    upload_video(os.path.join("video", chosen_video), title, description, tags)
