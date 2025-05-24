@@ -1,10 +1,15 @@
 import os
 import pickle
-import google.auth
-import google_auth_oauthlib.flow
+from google_auth_oauthlib.flow import InstalledAppFlow
 import googleapiclient.discovery
 import googleapiclient.errors
-from datetime import datetime
+from googleapiclient.http import MediaFileUpload
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+client_id = os.getenv("CLIENT_ID")
+client_secret = os.getenv("CLIENT_SECRET")
 
 SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
 
@@ -14,9 +19,21 @@ def get_authenticated_service():
         with open("token.pickle", "rb") as token:
             creds = pickle.load(token)
     else:
-        flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-            "client_secrets.json", SCOPES)
+        # Create credentials using client_id and client_secret directly
+        flow = InstalledAppFlow.from_client_config(
+            {
+                "installed": {
+                    "client_id": client_id,
+                    "client_secret": client_secret,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                    "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"]
+                }
+            },
+            scopes=SCOPES
+        )
         creds = flow.run_local_server(port=0)
+
         with open("token.pickle", "wb") as token:
             pickle.dump(creds, token)
 
@@ -38,7 +55,7 @@ def upload_video(video_file, title, description, tags):
         }
     }
 
-    media_file = googleapiclient.http.MediaFileUpload(video_file, chunksize=256 * 1024, resumable=True)
+    media_file = MediaFileUpload(video_file, chunksize=256 * 1024, resumable=True)
 
     request = youtube.videos().insert(
         part="snippet,status",
