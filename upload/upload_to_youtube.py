@@ -38,7 +38,7 @@ def upload_video(video_file, title, description, tags):
         }
     }
 
-    media_file = googleapiclient.http.MediaFileUpload(video_file, chunksize=-1, resumable=True, mimetype="video/*")
+    media_file = googleapiclient.http.MediaFileUpload(video_file, chunksize=256 * 1024, resumable=True)
 
     request = youtube.videos().insert(
         part="snippet,status",
